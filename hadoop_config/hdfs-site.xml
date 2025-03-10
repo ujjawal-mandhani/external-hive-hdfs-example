@@ -1,0 +1,33 @@
+<configuration>
+    <!-- Directory on HDFS for NameNode metadata -->
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>file:/opt/hadoop/data/nameNode</value> <!-- Local path on NameNode container -->
+        <description>Location of HDFS NameNode metadata</description>
+    </property>
+
+    <!-- Directory on HDFS for DataNode blocks -->
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>file:/opt/hadoop/data/dataNode</value> <!-- Local path on DataNode container -->
+        <description>Location of HDFS DataNode blocks</description>
+    </property>
+
+    <!-- HDFS replication factor (default is 3) -->
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value> <!-- Set the replication factor to 1 for simplicity -->
+    </property>
+
+    <!-- HDFS block size -->
+    <property>
+        <name>dfs.block.size</name>
+        <value>134217728</value> <!-- 128 MB block size -->
+    </property>
+
+    <!-- The port on which the NameNode listens -->
+    <property>
+        <name>dfs.namenode.rpc-address</name>
+        <value>namenode:8020</value> <!-- Port for NameNode RPC -->
+    </property>
+</configuration>

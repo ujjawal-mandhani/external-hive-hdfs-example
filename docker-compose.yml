@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  spark-master:
+    build: ./spark-cluster
+    container_name: spark-master
+    ports:
+      - 9010:8080
+      - 1001:7077
+      - 1000:10000
+      - 1005:4041
+      - 1006:4040
+    volumes:
+      - ./spark-cluster/spark-jobs/:/home/spark/jobs/
+      - ./spark-cluster/.ivy2/cache/cache/:/root/.ivy2/cache
+    environment:
+      - PYSPARK_PYTHON=/usr/bin/python3
+      - SPARK_VERSION=3.5 
+    # mem_limit: 3g
+    # cpus: 0.5
+    # mem_reservation: 512m
+    networks:
+      - hive-network
+
+  namenode:
+    image: apache/hadoop:3.3.5
+    container_name: namenode
+    hostname: namenode
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+    volumes:
+      - ./hadoop_namenode:/opt/hadoop/data/nameNode
+      - ./hadoop_config:/opt/hadoop/etc/hadoop
+      - ./start-hdfs.sh:/start-hdfs.sh
+    ports:
+      - "9870:9870"
+    command: [ "/bin/bash", "/start-hdfs.sh" ]
+    networks:
+      - hive-network
+
+  datanode1:
+    image: apache/hadoop:3.3.5
+    container_name: datanode1
+    hostname: datanode1
+    user: root
+    environment:
+      - HADOOP_HOME=/opt/hadoop
+    volumes:
+      - ./hadoop_datanode1:/opt/hadoop/data/dataNode
+      - ./hadoop_config:/opt/hadoop/etc/hadoop
+      - ./init-datanode.sh:/init-datanode.sh
+    depends_on:
+      - namenode
+    command: [ "/bin/bash", "/init-datanode.sh" ]
+    networks:
+      - hive-network
+  
+
+  postgres:
+    image: postgres
+    restart: unless-stopped
+    container_name: postgres
+    hostname: postgres
+    environment:
+      POSTGRES_DB: 'metastore_db'
+      POSTGRES_USER: 'hive'
+      POSTGRES_PASSWORD: 'password'
+    ports:
+      - 11003:5432
+    volumes:
+      - ./postgres/postgres_data:/var/lib/postgresql/data
+    networks:
+      - hive-network
+
+  metastore:
+    image: apache/hive:4.0.0
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    container_name: metastore
+    hostname: metastore
+    environment:
+      DB_DRIVER: postgres
+      SERVICE_NAME: 'metastore'
+      SERVICE_OPTS: '-Xmx1G -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore_db -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=password'
+      HIVE_CUSTOM_CONF_DIR: /hive_custom_conf
+    ports:
+      - '9083:9083'
+    volumes:
+      - ./remote-hive-conf:/hive_custom_conf
+      - type: bind
+        source: ./jars/hudi-hadoop-mr-bundle-1.0.0.jar
+        target: /opt/hive/lib/hudi-hadoop-mr-bundle-1.0.0.jar
+      - type: bind
+        source: ./jars/postgresql-42.6.0.jar
+        target: /opt/hive/lib/postgres.jar
+    networks:
+      - hive-network
+
+  hiveserver2:
+    image: apache/hive:4.0.0
+    restart: unless-stopped
+    container_name: hiveserver2
+    environment:
+      HIVE_SERVER2_THRIFT_PORT: 10000
+      SERVICE_OPTS: '-Xmx1G -Dhive.metastore.uris=thrift://metastore:9083'
+      IS_RESUME: 'true'
+      SERVICE_NAME: hiveserver2
+    volumes:
+      - type: bind
+        source: ./jars/hudi-hadoop-mr-bundle-1.0.0.jar
+        target: /opt/hive/lib/hudi-hadoop-mr-bundle-1.0.0.jar
+    ports:
+      - 10000:10000
+      - 10002:10002
+    networks:
+      - hive-network
+
+  hue:
+    image: gethue/hue
+    restart: unless-stopped
+    container_name: hue
+    ports:
+      - 11004:8888
+    volumes:
+      - ./hue.ini/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+      - ./hue.ini/desktop.db:/usr/share/hue/desktop/desktop.db
+    networks:
+      - hive-network
+
+
+networks:
+  hive-network:
+    driver: bridge

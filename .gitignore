@@ -1,0 +1,6 @@
+hadoop_datanode1
+hadoop_namenode
+postgres
+spark-cluster/spark-jobs/*.csv
+spark-cluster/.ivy2
+jars

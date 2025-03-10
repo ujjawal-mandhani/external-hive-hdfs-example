@@ -1,0 +1,14 @@
+<configuration>
+    <!-- The default file system URI (HDFS) -->
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://namenode:8020</value> <!-- Pointing to the NameNode container -->
+    </property>
+
+    <!-- The URI for HDFS (important for other tools like Hive or Spark to interact with HDFS) -->
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/opt/hadoop/tmp</value>
+        <description>A base for other temporary directories.</description>
+    </property>
+</configuration>
